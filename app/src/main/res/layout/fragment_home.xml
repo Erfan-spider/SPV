@@ -1,0 +1,385 @@
+<?xml version="1.0" encoding="utf-8"?>
+<androidx.constraintlayout.widget.ConstraintLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="@color/bg_root"
+    android:padding="20dp">
+
+    <LinearLayout
+        android:id="@+id/layoutTelegramBanner"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:gravity="center_vertical"
+        android:paddingHorizontal="18dp"
+        android:paddingVertical="14dp"
+        android:background="@drawable/bg_telegram_banner_ripple"
+        android:clickable="true"
+        android:focusable="true"
+        app:layout_constraintTop_toTopOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintEnd_toEndOf="parent">
+
+        <ImageView
+            android:layout_width="26dp"
+            android:layout_height="26dp"
+            android:src="@drawable/ic_telegram_plane" />
+
+        <LinearLayout
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:layout_marginStart="12dp"
+            android:orientation="vertical">
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="عضویت در کانال تلگرام"
+                android:textSize="14sp"
+                android:textStyle="bold"
+                android:textColor="@color/white" />
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="2dp"
+                android:text="@spiderV2ray"
+                android:textSize="12sp"
+                android:textColor="#D9EAF8" />
+
+        </LinearLayout>
+
+        <ImageView
+            android:layout_width="18dp"
+            android:layout_height="18dp"
+            android:rotation="-90"
+            android:src="@drawable/ic_chevron_down"
+            app:tint="@color/white" />
+
+    </LinearLayout>
+
+    <View
+        android:id="@+id/viewPowerGlow"
+        android:layout_width="180dp"
+        android:layout_height="180dp"
+        android:background="@drawable/bg_power_glow"
+        app:layout_constraintTop_toBottomOf="@id/layoutTelegramBanner"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"
+        android:layout_marginTop="16dp" />
+
+    <com.google.android.material.button.MaterialButton
+        android:id="@+id/btnPower"
+        android:layout_width="140dp"
+        android:layout_height="140dp"
+        android:insetTop="0dp"
+        android:insetBottom="0dp"
+        app:cornerRadius="70dp"
+        app:backgroundTint="@color/status_disconnected"
+        app:elevation="0dp"
+        app:rippleColor="#33FFFFFF"
+        android:stateListAnimator="@null"
+        android:text=""
+        android:textSize="40sp"
+        app:layout_constraintTop_toTopOf="@id/viewPowerGlow"
+        app:layout_constraintBottom_toBottomOf="@id/viewPowerGlow"
+        app:layout_constraintStart_toStartOf="@id/viewPowerGlow"
+        app:layout_constraintEnd_toEndOf="@id/viewPowerGlow" />
+
+    <ImageView
+        android:id="@+id/ivPowerIcon"
+        android:layout_width="40dp"
+        android:layout_height="40dp"
+        android:src="@drawable/ic_power"
+        android:clickable="false"
+        android:focusable="false"
+        app:layout_constraintTop_toTopOf="@id/btnPower"
+        app:layout_constraintBottom_toBottomOf="@id/btnPower"
+        app:layout_constraintStart_toStartOf="@id/btnPower"
+        app:layout_constraintEnd_toEndOf="@id/btnPower" />
+
+    <TextView
+        android:id="@+id/tvStatus"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="Disconnected"
+        android:textSize="22sp"
+        android:textStyle="bold"
+        android:textColor="@color/text_primary"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintTop_toBottomOf="@id/viewPowerGlow"
+        android:layout_marginTop="20dp" />
+
+    <TextView
+        android:id="@+id/tvHomeDesc"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="برای اتصال روی دکمه بزن"
+        android:textSize="13sp"
+        android:textColor="@color/text_gray"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintTop_toBottomOf="@id/tvStatus"
+        android:layout_marginTop="6dp" />
+
+    <androidx.cardview.widget.CardView
+        android:id="@+id/cardConfigDetail"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="20dp"
+        app:cardCornerRadius="18dp"
+        app:cardElevation="0dp"
+        app:cardBackgroundColor="@color/bg_card"
+        app:layout_constraintTop_toBottomOf="@id/tvHomeDesc"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintEnd_toEndOf="parent">
+
+        <androidx.constraintlayout.widget.ConstraintLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:padding="18dp">
+
+            <TextView
+                android:id="@+id/tvConfigLabel"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:text="ACTIVE CONFIGURATION"
+                android:textSize="11sp"
+                android:letterSpacing="0.08"
+                android:textColor="@color/text_gray"
+                app:layout_constraintTop_toTopOf="parent"
+                app:layout_constraintStart_toStartOf="parent"
+                app:layout_constraintEnd_toEndOf="parent"
+                android:gravity="center" />
+
+            <TextView
+                android:id="@+id/tvActiveConfigName"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="10dp"
+                android:text="کانفیگی انتخاب نشده"
+                android:textSize="17sp"
+                android:textStyle="bold"
+                android:textColor="@color/purple_primary"
+                android:ellipsize="end"
+                android:maxLines="1"
+                android:gravity="center"
+                app:layout_constraintTop_toBottomOf="@id/tvConfigLabel"
+                app:layout_constraintStart_toStartOf="parent"
+                app:layout_constraintEnd_toEndOf="parent" />
+
+            <TextView
+                android:id="@+id/tvActiveConfigProtocol"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="4dp"
+                android:textSize="13sp"
+                android:textColor="@color/text_gray"
+                app:layout_constraintTop_toBottomOf="@id/tvActiveConfigName"
+                app:layout_constraintStart_toStartOf="parent"
+                tools:text="vless" />
+
+            <TextView
+                android:id="@+id/tvActiveConfigAddress"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="4dp"
+                android:textSize="13sp"
+                android:textColor="@color/text_gray"
+                app:layout_constraintTop_toBottomOf="@id/tvActiveConfigProtocol"
+                app:layout_constraintStart_toStartOf="parent"
+                app:layout_constraintEnd_toEndOf="parent"
+                app:layout_constraintHorizontal_bias="0.5"
+                android:gravity="center"
+                tools:text="171.22.24.101:2443" />
+
+            <TextView
+                android:id="@+id/tvActiveConfigPing"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="12dp"
+                android:textSize="15sp"
+                android:textStyle="bold"
+                android:textColor="@color/ping_good"
+                app:layout_constraintTop_toBottomOf="@id/tvActiveConfigAddress"
+                app:layout_constraintStart_toStartOf="parent"
+                app:layout_constraintEnd_toEndOf="parent"
+                android:gravity="center"
+                tools:text="120ms" />
+
+            
+
+        </androidx.constraintlayout.widget.ConstraintLayout>
+
+    </androidx.cardview.widget.CardView>
+
+            <LinearLayout
+                android:id="@+id/layoutRealLocation"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                android:gravity="center"
+                android:paddingHorizontal="28dp"
+                android:paddingVertical="6dp"
+                android:background="@drawable/bg_location_badge"
+                android:visibility="gone"
+                android:elevation="6dp"
+                app:layout_constraintTop_toBottomOf="@id/layoutStats"
+                app:layout_constraintStart_toStartOf="parent"
+                app:layout_constraintEnd_toEndOf="parent"
+                android:layout_marginTop="18dp"
+                tools:visibility="visible">
+
+                <TextView
+                    android:id="@+id/tvRealLocationLabel"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="Real Location"
+                    android:textSize="9sp"
+                    android:textColor="#DDFFFFFF"
+                    android:letterSpacing="0.05" />
+
+                <TextView
+                    android:id="@+id/tvRealLocationFlag"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="2dp"
+                    android:textSize="20sp"
+                    tools:text="🇩🇪" />
+
+                <TextView
+                    android:id="@+id/tvRealLocationPlace"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="2dp"
+                    android:textSize="12sp"
+                    android:textStyle="bold"
+                    android:textColor="#FFFFFFFF"
+                    tools:text="Germany, Berlin" />
+
+                <TextView
+                    android:id="@+id/tvRealLocationIp"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="1dp"
+                    android:textSize="10sp"
+                    android:textColor="#BBFFFFFF"
+                    tools:text="185.23.xx.xx" />
+
+            </LinearLayout>
+
+    <TextView
+        android:id="@+id/tvSessionTotal"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="Total: 0 MB"
+        android:textSize="13sp"
+        android:textColor="@color/text_gray"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintTop_toBottomOf="@id/cardConfigDetail"
+        android:layout_marginTop="18dp" />
+
+    <LinearLayout
+        android:id="@+id/layoutStats"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:weightSum="2"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintTop_toBottomOf="@id/tvSessionTotal"
+        android:layout_marginTop="14dp">
+
+        <LinearLayout
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:layout_marginEnd="6dp"
+            android:orientation="vertical"
+            android:gravity="center"
+            android:paddingVertical="14dp"
+            android:background="@drawable/bg_glass_chip">
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Upload"
+                android:textSize="12sp"
+                android:textColor="@color/text_gray" />
+
+            <TextView
+                android:id="@+id/tvUplink"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="2dp"
+                android:text="0 KB/s"
+                android:textSize="16sp"
+                android:textStyle="bold"
+                android:textColor="@color/text_primary" />
+
+        </LinearLayout>
+
+        <LinearLayout
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:layout_marginStart="6dp"
+            android:orientation="vertical"
+            android:gravity="center"
+            android:paddingVertical="14dp"
+            android:background="@drawable/bg_glass_chip">
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Download"
+                android:textSize="12sp"
+                android:textColor="@color/text_gray" />
+
+            <TextView
+                android:id="@+id/tvDownlink"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="2dp"
+                android:text="0 KB/s"
+                android:textSize="16sp"
+                android:textStyle="bold"
+                android:textColor="@color/text_primary" />
+
+        </LinearLayout>
+
+    </LinearLayout>
+
+
+    <View
+        android:id="@+id/viewSpiderGlow"
+        android:layout_width="150dp"
+        android:layout_height="150dp"
+        android:alpha="0"
+        android:background="@drawable/bg_spider_glow"
+        android:clickable="false"
+        android:focusable="false"
+        app:layout_constraintTop_toTopOf="@id/ivSpider"
+        app:layout_constraintBottom_toBottomOf="@id/ivSpider"
+        app:layout_constraintLeft_toLeftOf="@id/ivSpider"
+        app:layout_constraintRight_toRightOf="@id/ivSpider" />
+
+    <ImageView
+        android:id="@+id/ivSpider"
+        android:layout_width="110dp"
+        android:layout_height="80dp"
+        android:src="@drawable/spider"
+        android:scaleType="fitCenter"
+        android:clickable="false"
+        android:focusable="false"
+        android:layout_marginLeft="-8dp"
+        app:layout_constraintTop_toTopOf="@id/btnPower"
+        app:layout_constraintBottom_toBottomOf="@id/btnPower"
+        app:layout_constraintLeft_toRightOf="@id/btnPower" />
+
+</androidx.constraintlayout.widget.ConstraintLayout>

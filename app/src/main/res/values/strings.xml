@@ -1,0 +1,11 @@
+<resources>
+    <string name="app_name">SPV</string>
+    <string name="connect">Connect</string>
+    <string name="disconnect">Disconnect</string>
+    <string name="status_disconnected">Disconnected</string>
+    <string name="status_connected">Connected</string>
+    <string name="notification_channel_name">SPV VPN</string>
+    <string name="notification_channel_desc">نمایش وضعیت اتصال VPN</string>
+    <string name="vpn_connected">SPV • متصل</string>
+    <string name="vpn_disconnected">SPV • قطع</string>
+</resources>

@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <color name="bg_root">#F4F7FB</color>
+    <color name="bg_card">#FFFFFF</color>
+    <color name="bg_card_alt">#EEF2F7</color>
+    <color name="purple_primary">#0284C7</color>
+    <color name="purple_dark">#0369A1</color>
+    <color name="text_primary">#0F172A</color>
+    <color name="text_gray">#64748B</color>
+    <color name="divider">#E2E8F0</color>
+    <color name="white">#FFFFFF</color>
+    <color name="bg_light">#F4F7FB</color>
+    <color name="ping_good">#16A34A</color>
+    <color name="ping_mid">#D97706</color>
+    <color name="ping_bad">#DC2626</color>
+    <color name="status_connected">#0284C7</color>
+    <color name="status_disconnected">#94A3B8</color>
+</resources>

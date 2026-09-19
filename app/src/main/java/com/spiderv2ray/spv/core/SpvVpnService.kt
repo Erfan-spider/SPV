@@ -1,0 +1,424 @@
+package com.spiderv2ray.spv.core
+
+import android.app.Notification
+import android.app.NotificationChannel
+import android.app.NotificationManager
+import android.app.PendingIntent
+import android.content.Context
+import android.content.Intent
+import android.net.VpnService
+import android.os.Build
+import android.os.Handler
+import android.os.Looper
+import android.os.ParcelFileDescriptor
+import android.widget.Toast
+import androidx.core.app.NotificationCompat
+import com.spiderv2ray.spv.MainActivity
+import com.spiderv2ray.spv.R
+import com.spiderv2ray.spv.data.BypassAppsStore
+import com.spiderv2ray.spv.data.ConfigRepository
+import com.spiderv2ray.spv.ui.MoreFragment
+import com.spiderv2ray.spv.ui.SpvWidgetProvider
+import libXray.DialerController
+import libXray.LibXray
+import org.json.JSONArray
+import org.json.JSONObject
+import java.net.HttpURLConnection
+import java.net.URL
+
+class SpvVpnService : VpnService() {
+
+    private var vpnInterface: ParcelFileDescriptor? = null
+    private val mainHandler = Handler(Looper.getMainLooper())
+    private var statsRunnable: Runnable? = null
+    private var isGiftActive: Boolean = false
+    private var giftLastUp: Long = 0
+    private var giftLastDown: Long = 0
+
+    companion object {
+        const val ACTION_CONNECT = "com.spiderv2ray.spv.CONNECT"
+        const val ACTION_DISCONNECT = "com.spiderv2ray.spv.DISCONNECT"
+        const val ACTION_TOGGLE = "com.spiderv2ray.spv.TOGGLE"
+        const val EXTRA_CONFIG_ID = "extra_config_id"
+        const val METRICS_PORT = 49227
+        const val NOTIFICATION_ID = 1001
+        const val CHANNEL_ID = "spv_vpn_channel"
+        private const val DIRECT_TAG = "spv-direct"
+        private val PRIVATE_RANGES = listOf(
+            "10.0.0.0/8", "172.16.0.0/12", "192.168.0.0/16", "169.254.0.0/16",
+            "224.0.0.0/4", "fc00::/7", "fe80::/10"
+        )
+
+        @Volatile var isRunning = false
+            private set
+        @Volatile var lastError: String? = null
+            private set
+
+        // آخرین آمار ترافیک (بایت) - HomeFragment این‌ها رو می‌خونه
+        @Volatile var lastUplink: Long = 0
+        @Volatile var lastDownlink: Long = 0
+
+        // برای به‌روزرسانی UI و ویجت بدون static listener پیچیده
+        fun notifyStateChanged(context: Context) {
+            try {
+                val intent = Intent(SpvWidgetProvider.ACTION_WIDGET_UPDATE).apply {
+                    setPackage(context.packageName)
+                }
+                context.sendBroadcast(intent)
+            } catch (_: Exception) { }
+        }
+    }
+
+    private val protector = object : DialerController {
+        override fun protectFd(fd: Long): Boolean {
+            return protect(fd.toInt())
+        }
+    }
+
+    private fun toast(msg: String) {
+        mainHandler.post {
+            Toast.makeText(this, msg, Toast.LENGTH_SHORT).show()
+        }
+    }
+
+    override fun onCreate() {
+        super.onCreate()
+        createNotificationChannel()
+    }
+
+    override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
+        when (intent?.action) {
+            ACTION_CONNECT -> {
+                val configId = intent.getStringExtra(EXTRA_CONFIG_ID)
+                if (configId.isNullOrBlank()) {
+                    toast("کانفیگی مشخص نشده")
+                    return START_NOT_STICKY
+                }
+                val repo = ConfigRepository(applicationContext)
+                val config = repo.getAll().find { it.id == configId }
+                if (config == null) {
+                    toast("کانفیگ پیدا نشد")
+                    return START_NOT_STICKY
+                }
+                startVpn(config.outboundJson, config.tag, config.isGift)
+            }
+            ACTION_DISCONNECT -> stopVpn()
+            ACTION_TOGGLE -> {
+                if (isRunning) {
+                    stopVpn()
+                } else {
+                    val repo = ConfigRepository(applicationContext)
+                    val active = repo.getActive()
+                    if (active != null) {
+                        startVpn(active.outboundJson, active.tag, active.isGift)
+                    } else {
+                        toast("اول یک کانفیگ را از تب Configs انتخاب کن")
+                    }
+                }
+            }
+        }
+        return START_STICKY
+    }
+
+    private fun createNotificationChannel() {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            val channel = NotificationChannel(
+                CHANNEL_ID,
+                "SPV VPN",
+                NotificationManager.IMPORTANCE_LOW
+            ).apply {
+                description = "نمایش وضعیت اتصال VPN"
+                setShowBadge(false)
+            }
+            val nm = getSystemService(NotificationManager::class.java)
+            nm.createNotificationChannel(channel)
+        }
+    }
+
+    private fun buildNotification(connected: Boolean, configTag: String? = null): Notification {
+        val openIntent = Intent(this, MainActivity::class.java).apply {
+            flags = Intent.FLAG_ACTIVITY_SINGLE_TOP or Intent.FLAG_ACTIVITY_CLEAR_TOP
+        }
+        val openPi = PendingIntent.getActivity(
+            this, 0, openIntent,
+            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
+        )
+
+        val toggleIntent = Intent(this, SpvVpnService::class.java).apply {
+            action = ACTION_TOGGLE
+        }
+        val togglePi = PendingIntent.getService(
+            this, 1, toggleIntent,
+            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
+        )
+
+        val title = if (connected) "SPV • متصل" else "SPV • قطع"
+        val text = if (connected) {
+            configTag ?: "ترافیک از طریق تونل عبور می‌کند"
+        } else {
+            "برای اتصال روی دکمه بزن"
+        }
+
+        val builder = NotificationCompat.Builder(this, CHANNEL_ID)
+            .setContentTitle(title)
+            .setContentText(text)
+            .setSmallIcon(R.drawable.ic_power)
+            .setContentIntent(openPi)
+            .setOngoing(connected)
+            .setOnlyAlertOnce(true)
+            .setCategory(NotificationCompat.CATEGORY_SERVICE)
+            .setPriority(NotificationCompat.PRIORITY_LOW)
+            .addAction(
+                0,
+                if (connected) "قطع اتصال" else "وصل",
+                togglePi
+            )
+
+        return builder.build()
+    }
+
+    private fun startVpn(outboundJson: String, configTag: String = "", isGift: Boolean = false) {
+        isGiftActive = isGift
+        giftLastUp = 0
+        giftLastDown = 0
+        try {
+            // اگر قبلاً وصل بود، اول قطع کن
+            if (isRunning) {
+                stopVpnInternal()
+            }
+
+            val outbound = JSONObject(outboundJson)
+            val bypassLan = MoreFragment.isBypassLanEnabled(this)
+
+            val builder = Builder()
+                .setSession("SPV")
+                .addAddress("10.10.10.2", 30)
+                .addDnsServer("8.8.8.8")
+                .addDnsServer("1.1.1.1")
+                .setMtu(1500)
+                .setBlocking(true)
+
+            // Full tunnel. LAN bypass is done by the Xray routing rule below
+            // (private ranges -> direct outbound), which works on every Android version.
+            builder.addRoute("0.0.0.0", 0)
+
+            // IPv6 عمداً غیرفعال شد: هندشیک TLS روی IPv6 داخل این تون نصفه می‌موند
+            // (TLS alert / unexpected eof)، در حالی که IPv4 سالمه. با حذف آدرس/روت
+            // IPv6، اپ‌هایی که اول IPv6 رو امتحان می‌کنن (Happy Eyeballs) بلافاصله
+            // می‌رن سراغ IPv4 به‌جای گیر کردن تا تایم‌اوت.
+
+            // Split tunneling: apps in bypass list do NOT go through VPN
+            val bypassPackages = BypassAppsStore.getPackages(this)
+            for (pkg in bypassPackages) {
+                try {
+                    builder.addDisallowedApplication(pkg)
+                } catch (e: Exception) {
+                    android.util.Log.w("SPV", "cannot disallow $pkg", e)
+                }
+            }
+
+            vpnInterface = builder.establish()
+            val fd = vpnInterface?.fd
+            if (fd == null) {
+                lastError = "establish() failed - VPN interface null"
+                toast("اتصال ناموفق بود")
+                stopSelf()
+                return
+            }
+
+            // Start as foreground BEFORE heavy work
+            startForeground(NOTIFICATION_ID, buildNotification(true, configTag))
+
+            LibXray.registerDialerController(protector)
+            val xrayConfig = JSONObject().apply {
+                put("metrics", JSONObject().apply {
+                    put("listen", "127.0.0.1:$METRICS_PORT")
+                })
+                put("policy", JSONObject().apply {
+                    put("system", JSONObject().apply {
+                        put("statsInboundDownlink", true)
+                        put("statsInboundUplink", true)
+                        put("statsOutboundDownlink", true)
+                        put("statsOutboundUplink", true)
+                    })
+                })
+                put("stats", JSONObject())
+                put("inbounds", JSONArray().put(
+                    JSONObject().apply {
+                        put("port", 0)
+                        put("protocol", "tun")
+                        put("settings", JSONObject().apply {
+                            put("name", "tun0")
+                            put("mtu", 1500)
+                        })
+                    }
+                ))
+                put("outbounds", JSONArray().put(outbound).put(JSONObject().apply {
+                    put("protocol", "freedom")
+                    put("tag", DIRECT_TAG)
+                }))
+                if (bypassLan) {
+                    put("routing", JSONObject().apply {
+                        put("domainStrategy", "AsIs")
+                        put("rules", JSONArray().put(JSONObject().apply {
+                            put("type", "field")
+                            put("ip", JSONArray(PRIVATE_RANGES))
+                            put("outboundTag", DIRECT_TAG)
+                        }))
+                    })
+                }
+            }
+
+            val runReq = JSONObject().apply {
+                put("apiVersion", 3)
+                put("method", "runXray")
+                put("payload", JSONObject().apply {
+                    put("xrayJson", xrayConfig.toString())
+                    put("tunFd", fd)
+                })
+            }
+
+            val runResp = JSONObject(LibXray.invoke(runReq.toString()))
+
+            if (runResp.optBoolean("success", false)) {
+                isRunning = true
+                lastError = null
+                toast("اتصال موفق")
+                startStatsPolling()
+                updateNotification(true, configTag)
+                notifyStateChanged(this)
+            } else {
+                lastError = "runXray failed: ${runResp.optString("error", "unknown")}"
+                toast("اتصال ناموفق بود")
+                stopVpn()
+            }
+        } catch (e: Exception) {
+            lastError = "Exception: ${e.javaClass.simpleName}: ${e.message}"
+            android.util.Log.e("SPV", "startVpn error", e)
+            toast("اتصال ناموفق بود")
+            stopVpn()
+        }
+    }
+
+    private fun updateNotification(connected: Boolean, configTag: String? = null) {
+        val nm = getSystemService(NotificationManager::class.java)
+        nm.notify(NOTIFICATION_ID, buildNotification(connected, configTag))
+    }
+
+    private fun startStatsPolling() {
+        stopStatsPolling()
+        val runnable = object : Runnable {
+            override fun run() {
+                fetchStats()
+                if (isRunning) {
+                    mainHandler.postDelayed(this, 1000)
+                }
+            }
+        }
+        statsRunnable = runnable
+        mainHandler.postDelayed(runnable, 1000)
+    }
+
+    private fun stopStatsPolling() {
+        statsRunnable?.let { mainHandler.removeCallbacks(it) }
+        statsRunnable = null
+    }
+
+    private fun fetchStats() {
+        Thread {
+            try {
+                val url = URL("http://127.0.0.1:$METRICS_PORT/debug/vars")
+                val conn = url.openConnection() as HttpURLConnection
+                conn.connectTimeout = 1500
+                conn.readTimeout = 1500
+                val text = conn.inputStream.bufferedReader().readText()
+                conn.disconnect()
+
+                val json = JSONObject(text)
+                val stats = json.optJSONObject("stats")
+                val outboundStats = stats?.optJSONObject("outbound")
+
+                var up = 0L
+                var down = 0L
+                outboundStats?.let { obj ->
+                    val tags = obj.keys()
+                    while (tags.hasNext()) {
+                        val tag = tags.next()
+                        if (tag == DIRECT_TAG) continue
+                        val tagObj = obj.optJSONObject(tag) ?: continue
+                        up += tagObj.optLong("uplink", 0)
+                        down += tagObj.optLong("downlink", 0)
+                    }
+                }
+                lastUplink = up
+                lastDownlink = down
+
+                if (isGiftActive) {
+                    val deltaUp = (up - giftLastUp).coerceAtLeast(0)
+                    val deltaDown = (down - giftLastDown).coerceAtLeast(0)
+                    giftLastUp = up
+                    giftLastDown = down
+                    com.spiderv2ray.spv.util.GiftConfigManager.addUsedBytes(applicationContext, deltaUp + deltaDown)
+                    if (com.spiderv2ray.spv.util.GiftConfigManager.isExhausted(applicationContext)) {
+                        isGiftActive = false
+                        mainHandler.post {
+                            toast("\u06f5 \u06af\u06cc\u06af \u0647\u062f\u06cc\u0647 \u062a\u0645\u0627\u0645 \u0634\u062f")
+                            stopVpn()
+                        }
+                    }
+                }
+            } catch (e: Exception) {
+                android.util.Log.e("SPV", "stats fetch error", e)
+            }
+        }.start()
+    }
+
+    private fun stopVpnInternal() {
+        stopStatsPolling()
+        try {
+            val stopReq = JSONObject().apply {
+                put("apiVersion", 3)
+                put("method", "stopXray")
+                put("payload", JSONObject())
+            }
+            LibXray.invoke(stopReq.toString())
+        } catch (_: Exception) { }
+        try {
+            vpnInterface?.close()
+        } catch (_: Exception) { }
+        vpnInterface = null
+        isRunning = false
+        lastUplink = 0
+        lastDownlink = 0
+    }
+
+    private fun stopVpn() {
+        val wasRunning = isRunning
+        stopVpnInternal()
+        if (wasRunning) {
+            toast("اتصال قطع شد")
+        }
+        // Update notification then stop foreground
+        try {
+            updateNotification(false)
+        } catch (_: Exception) { }
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
+            stopForeground(STOP_FOREGROUND_REMOVE)
+        } else {
+            @Suppress("DEPRECATION")
+            stopForeground(true)
+        }
+        notifyStateChanged(this)
+        stopSelf()
+    }
+
+    override fun onDestroy() {
+        stopVpnInternal()
+        super.onDestroy()
+    }
+
+    override fun onRevoke() {
+        stopVpn()
+        super.onRevoke()
+    }
+}
